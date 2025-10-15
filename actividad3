@@ -14,6 +14,7 @@
 typedef struct pasajero {
     char tipo_documento[MAX_DOC_TYPE];
     char apellido[MAX_APELLIDO];
+    int genero; // Campo de Género: 1: Masculino, 2: Femenino, 3: No Binario
     struct pasajero *siguiente;
 } Pasajero;
 
@@ -25,6 +26,7 @@ typedef struct {
 } ColaPasajeros;
 
 
+// --- Funciones Auxiliares y de la Cola ---
 
 // Función auxiliar para limpiar el buffer después de scanf
 void limpiar_buffer() {
@@ -39,11 +41,9 @@ void inicializar_cola(ColaPasajeros *c) {
     c->total_registrados = 0;
 }
 
-
-
 // Registrar pasajero (Encolar / Agregar al final - FIFO)
 // Retorna 1 si es exitoso, 0 si hay error de memoria
-int registrar_pasajero(ColaPasajeros *c, const char *tipo_doc, const char *apellido) {
+int registrar_pasajero(ColaPasajeros *c, const char *tipo_doc, const char *apellido, int genero) {
     Pasajero *nuevo = (Pasajero *)malloc(sizeof(Pasajero));
     if (nuevo == NULL) {
         return 0; // Error de memoria
@@ -54,6 +54,10 @@ int registrar_pasajero(ColaPasajeros *c, const char *tipo_doc, const char *apell
     nuevo->tipo_documento[sizeof(nuevo->tipo_documento) - 1] = '\0';
     strncpy(nuevo->apellido, apellido, sizeof(nuevo->apellido) - 1);
     nuevo->apellido[sizeof(nuevo->apellido) - 1] = '\0';
+    
+    // Asignar el nuevo campo
+    nuevo->genero = genero; 
+    
     nuevo->siguiente = NULL;
 
     // Enlazar el nodo al final de la cola
@@ -98,14 +102,62 @@ void mostrar_lista(ColaPasajeros *c) {
     printf("\n--- LISTA DE PASAJEROS REGISTRADOS (FIFO) ---\n");
     Pasajero *actual = c->inicio;
     int turno = 1;
+    char *genero_str;
 
     while (actual != NULL) {
-        printf("Turno %3d | Doc: %s | Apellido: %s\n",
-               turno, actual->tipo_documento, actual->apellido);
+        // Determinar la cadena de género para la impresión
+        switch (actual->genero) {
+            case 1: genero_str = "Masculino"; break;
+            case 2: genero_str = "Femenino"; break;
+            case 3: genero_str = "No Binario"; break;
+            default: genero_str = "Desconocido"; break;
+        }
+
+        printf("Turno %3d | Doc: %s | Apellido: %s | Genero: %s\n",
+               turno, actual->tipo_documento, actual->apellido, genero_str);
         turno++;
         actual = actual->siguiente;
     }
 }
+
+// Implementación de la nueva función de Reporte de Género
+void reporte_genero(ColaPasajeros *c) {
+    int masculino = 0;
+    int femenino = 0;
+    int no_binario = 0;
+    
+
+    // Recorrer toda la lista (cola)
+    Pasajero *actual = c->inicio;
+    while (actual != NULL) {
+        switch (actual->genero) {
+            case 1:
+                masculino++;
+                break;
+            case 2:
+                femenino++;
+                break;
+            case 3:
+                no_binario++;
+                break;
+            default:
+                desconocido++; // Para cualquier valor no esperado
+                break;
+        }
+        actual = actual->siguiente;
+    }
+    
+    printf("\n--- REPORTE DE GÉNERO (Pasajeros en Espera) ---\n");
+    printf("Pasajeros Masculino (1): %d\n", masculino);
+    printf("Pasajeros Femenino (2): %d\n", femenino);
+    printf("Pasajeros No Binario (3): %d\n", no_binario);
+    
+    if (desconocido > 0) {
+        printf("Pasajeros con Género Desconocido: %d\n", desconocido);
+    }
+    printf("Total de pasajeros en espera: %d\n", c->total_registrados);
+}
+
 
 // Liberar toda la memoria al salir
 void liberar_memoria(ColaPasajeros *c) {
@@ -121,7 +173,7 @@ void liberar_memoria(ColaPasajeros *c) {
 }
 
 
-// Función Principal (Main)
+// --- Función Principal (Main) ---
 
 
 int main() {
@@ -132,7 +184,7 @@ int main() {
     int opcion;
     int abordados = 0; // Contador de pasajeros que ya subieron al avión
 
-    printf(" SISTEMA DE GESTIÓN DE VUELO (LENGUAJE C) \n");
+    printf("SISTEMA DE GESTIÓN DE VUELO  \n");
     printf("Ingrese la capacidad maxima del avion: ");
 
     if (scanf("%d", &capacidad) != 1 || capacidad <= 0) {
@@ -153,7 +205,8 @@ int main() {
         printf("3) Abordar siguiente pasajero (FIFO)\n");
         printf("4) Abordar a todos hasta llenar el avion\n");
         printf("5) Mostrar estado del vuelo\n");
-        printf("6) Salir\n");
+        printf("6) Reporte de género (Pasajeros en espera)\n"); // Nueva opción
+        printf("7) Salir\n"); // Opción de salir movida al 7
         printf("Seleccione una opcion: ");
 
         if (scanf("%d", &opcion) != 1) {
@@ -166,22 +219,33 @@ int main() {
         switch (opcion) {
             case 1: { // Registrar Pasajero
                 if (cola.total_registrados >= limite) {
-                    printf(" Ya se alcanzo el limite maximo de pasajeros (%d).\n", limite);
+                    printf("Ya se alcanzo el limite maximo de pasajeros (%d).\n", limite);
                 } else {
                     char tipo_doc[MAX_DOC_TYPE];
                     char apellido[MAX_APELLIDO];
+                    int genero;
                     
-                    // Nota: Se usa scanf("%s") que es simple, pero no maneja espacios.
-                    printf("Ingrese tipo de documento (%s, %s, %s): ", DOC_CC, DOC_TI, DOC_PA); // Usando las constantes
-                    scanf("%s", tipo_doc);
+                    // 1. Solicitar Tipo de Documento
+                    printf("Ingrese tipo de documento (%s, %s, %s): ", DOC_CC, DOC_TI, DOC_PA);
+                    if (scanf("%s", tipo_doc) != 1) { limpiar_buffer(); printf(" Error en documento.\n"); break; }
                     limpiar_buffer ();
 
+                    // 2. Solicitar Apellido
                     printf("Ingrese primer apellido: ");
-                    scanf("%s", apellido);
+                    if (scanf("%s", apellido) != 1) { limpiar_buffer(); printf(" Error en apellido.\n"); break; }
                     limpiar_buffer();
 
-                    if (registrar_pasajero(&cola, tipo_doc, apellido)) {
-                        printf(" Pasajero registrado exitosamente. Turno asignado: %d.\n", cola.total_registrados);
+                    // 3. Solicitar Género (NUEVO)
+                    printf("Ingrese genero (1:Masculino, 2:Femenino, 3:No Binario): ");
+                    if (scanf("%d", &genero) != 1 || (genero < 1 || genero > 3)) {
+                        printf(" Error: Género no válido. Pasajero NO REGISTRADO.\n");
+                        limpiar_buffer();
+                        break;
+                    }
+                    limpiar_buffer();
+
+                    if (registrar_pasajero(&cola, tipo_doc, apellido, genero)) {
+                        printf("Pasajero registrado exitosamente. Turno asignado: %d.\n", cola.total_registrados);
                     } else {
                         printf(" Error de memoria al registrar.\n");
                     }
@@ -243,7 +307,11 @@ int main() {
                 printf("Pasajeros En Espera (Lista FIFO): %d\n", cola.total_registrados);
                 break;
 
-            case 6:
+            case 6: // Reporte de Género 
+                reporte_genero(&cola);
+                break;
+                
+            case 7: // Salir (Opción 7)
                 printf("Saliendo del programa...\n");
                 break;
 
@@ -252,7 +320,7 @@ int main() {
                 break;
         }
 
-    } while (opcion != 6);
+    } while (opcion != 7); // Condición de salida actualizada
 
     // Liberar memoria antes de salir
     liberar_memoria(&cola);
