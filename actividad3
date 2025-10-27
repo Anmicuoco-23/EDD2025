@@ -4,7 +4,7 @@
 #include <ctype.h>
 
 #define MAX_APELLIDOS 110
-#define MAX_DOCNUM 16
+#define MAX_DOCNUM 20
 
 // 1. MODIFICACIÓN: Nuevo campo 'peso_kg' (float)
 typedef struct passenger {
@@ -72,7 +72,7 @@ void mostrar_lista(List *l) {
     Passenger *cur = l->head;
     int i = 1;
     printf("   Tipo | Número | Apellido | Género | Nivel | Peso (kg)\n");
-    printf("-------------------------------------------------------------------\n");
+    printf("n");
     while (cur) {
         // MODIFICACIÓN: Muestra el peso_kg
         printf("%2d) %s | %s | %s | %s | %s | %.2f\n", i++, cur->doc_type, cur->doc_number,
@@ -226,7 +226,7 @@ int main() {
     int capacidad;
     int result_capacidad;
     
-    printf("✈️ Sistema de Gestión de Pasajeros ✈️\n");
+    printf("Sistema de Gestión de Pasajeros \n");
 
     // --- Capacidad (Validación robusta) ---
     do {
@@ -279,9 +279,9 @@ int main() {
 
             if (agregar_pasajero(&lista)) {
                 vendidos++;
-                printf("✅ Pasajero registrado exitosamente.\n");
+                printf( "Pasajero registrado exitosamente.\n");
             } else {
-                printf("❌ Error al registrar pasajero.\n");
+                printf(" Error al registrar pasajero.\n");
             }
 
         } else if (opcion == 2) {
@@ -298,7 +298,7 @@ int main() {
             } else {
                 abordados++;
                 // MODIFICACIÓN: Muestra el peso_kg
-                printf("➡️ Abordando (MENOR PESO): %s | %s | %s | Peso: %.2f kg\n",
+                printf("Abordando (MENOR PESO): %s | %s | %s | Peso: %.2f kg\n",
                         p->doc_type, p->doc_number, p->last_name, p->peso_kg);
                 free(p);
             }
@@ -311,14 +311,14 @@ int main() {
                 abordados++;
                 count++;
                 // MODIFICACIÓN: Muestra el peso_kg
-                printf("➡️ Abordando (MENOR PESO): %s | %s | %s | Peso: %.2f kg\n",
+                printf("Abordando (MENOR PESO): %s | %s | %s | Peso: %.2f kg\n",
                         p->doc_type, p->doc_number, p->last_name, p->peso_kg);
                 free(p);
             }
             if (count == 0)
                 printf("No hay pasajeros para abordar.\n");
             else
-                printf("✈️ %d pasajeros abordaron.\n", count);
+                printf("%d pasajeros abordaron.\n", count);
 
         } else if (opcion == 5) {
             printf("\n---- Estado del Vuelo ----\n");
@@ -343,3 +343,4 @@ int main() {
 
     return 0;
 }
+
