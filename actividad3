@@ -6,12 +6,14 @@
 #define MAX_APELLIDOS 110
 #define MAX_DOCNUM 16
 
+// 1. MODIFICACIÓN: Nuevo campo 'peso_kg' (float)
 typedef struct passenger {
     char doc_type[4];
     char doc_number[MAX_DOCNUM];
     char last_name[MAX_APELLIDOS];
     int genero; // 1: Masculino, 2: Femenino, 3: No binario
     int nivel;  // 1: Económico, 2: Oro, 3: Platino
+    float peso_kg; // Nuevo campo: Peso del equipaje de mano en kg
     struct passenger* next;
 } Passenger;
 
@@ -48,7 +50,8 @@ void read_line(char *buffer, int size) {
 const char* obtener_genero(int g) {
     if (g == 1) return "Masculino";
     else if (g == 2) return "Femenino";
-    else return "No binario";
+    else if (g == 3) return "No binario";
+    else return "Desconocido";
 }
 
 const char* obtener_nivel(int nivel) {
@@ -68,9 +71,12 @@ void mostrar_lista(List *l) {
 
     Passenger *cur = l->head;
     int i = 1;
+    printf("   Tipo | Número | Apellido | Género | Nivel | Peso (kg)\n");
+    printf("-------------------------------------------------------------------\n");
     while (cur) {
-        printf("%2d) %s | %s | %s | %s | %s\n", i++, cur->doc_type, cur->doc_number,
-               cur->last_name, obtener_genero(cur->genero), obtener_nivel(cur->nivel));
+        // MODIFICACIÓN: Muestra el peso_kg
+        printf("%2d) %s | %s | %s | %s | %s | %.2f\n", i++, cur->doc_type, cur->doc_number,
+                       cur->last_name, obtener_genero(cur->genero), obtener_nivel(cur->nivel), cur->peso_kg);
         cur = cur->next;
     }
 }
@@ -96,7 +102,7 @@ int agregar_pasajero(List *l) {
         read_line(nuevo->last_name, sizeof(nuevo->last_name));
     } while (!valid_last_name(nuevo->last_name));
 
-    // --- MEJORA: Género (Validación robusta) ---
+    // --- Género (Validación robusta) ---
     int result_g;
     do {
         printf("Género (1: Masculino, 2: Femenino, 3: No binario): ");
@@ -109,7 +115,7 @@ int agregar_pasajero(List *l) {
         }
     } while (nuevo->genero < 1 || nuevo->genero > 3);
 
-    // --- MEJORA: Nivel (Validación robusta) ---
+    // --- Nivel (Validación robusta) ---
     int result_n;
     do {
         printf("Nivel (1: Económico, 2: Oro, 3: Platino): ");
@@ -121,6 +127,20 @@ int agregar_pasajero(List *l) {
             nuevo->nivel = -1; // Fuerza la reentrada si falló
         }
     } while (nuevo->nivel < 1 || nuevo->nivel > 3);
+
+    // --- MODIFICACIÓN: Captura y Validación de Peso (float positivo) ---
+    int result_p;
+    do {
+        printf("Peso de equipaje de mano en kg (ej: 7.5): ");
+        result_p = scanf("%f", &nuevo->peso_kg);
+        while (getchar() != '\n'); // Limpia buffer
+
+        if (result_p != 1 || nuevo->peso_kg < 0.0) {
+            printf("**Error:** Entrada inválida. Ingrese un peso válido (número no negativo).\n");
+            nuevo->peso_kg = -1.0; // Fuerza la reentrada si falló
+        }
+    } while (nuevo->peso_kg < 0.0);
+    // --- Fin de MODIFICACIÓN: Captura de Peso ---
 
     nuevo->next = NULL;
 
@@ -136,17 +156,21 @@ int agregar_pasajero(List *l) {
     return 1;
 }
 
-// Eliminar por prioridad (sin cambios, ya que funciona O(n))
+// MODIFICACIÓN: Eliminar por prioridad (Mínimo peso_kg primero)
 Passenger *eliminar_por_prioridad(List *l) {
     if (!l->head) return NULL;
 
     Passenger *prev = NULL, *cur = l->head;
     Passenger *prev_target = NULL, *target = l->head;
-    int max_nivel = cur->nivel;
+    
+    // Inicializa el mínimo peso con el del primer pasajero
+    float min_peso = cur->peso_kg; 
 
+    // Itera para encontrar al pasajero con el mínimo peso_kg
     while (cur) {
-        if (cur->nivel > max_nivel) {
-            max_nivel = cur->nivel;
+        // REQUERIMIENTO: Prioriza al de menor peso_kg
+        if (cur->peso_kg < min_peso) { 
+            min_peso = cur->peso_kg;
             prev_target = prev;
             target = cur;
         }
@@ -154,6 +178,7 @@ Passenger *eliminar_por_prioridad(List *l) {
         cur = cur->next;
     }
 
+    // Procede a eliminar el nodo 'target'
     if (target == l->head) {
         l->head = target->next;
     } else if (prev_target) {
@@ -163,6 +188,8 @@ Passenger *eliminar_por_prioridad(List *l) {
     l->size--;
     return target;
 }
+// --- Fin de MODIFICACIÓN: Eliminar por prioridad ---
+
 
 void liberar_lista(List *l) {
     Passenger *cur = l->head;
@@ -199,9 +226,9 @@ int main() {
     int capacidad;
     int result_capacidad;
     
-    printf("Sistema de Gestión de Pasajeros\n");
+    printf("✈️ Sistema de Gestión de Pasajeros ✈️\n");
 
-    // --- MEJORA: Capacidad (Validación robusta) ---
+    // --- Capacidad (Validación robusta) ---
     do {
         printf("Ingrese la capacidad máxima del avión: ");
         result_capacidad = scanf("%d", &capacidad);
@@ -228,14 +255,14 @@ int main() {
         printf("\n----- MENÚ -----\n");
         printf("1) Registrar pasajero\n");
         printf("2) Mostrar pasajeros\n");
-        printf("3) Abordar siguiente pasajero (por prioridad)\n");
-        printf("4) Abordar todos hasta llenar (por prioridad)\n");
+        printf("3) Abordar siguiente pasajero (Prioridad: MENOR peso_kg)\n"); // Cambiado el texto
+        printf("4) Abordar todos hasta llenar (Prioridad: MENOR peso_kg)\n"); // Cambiado el texto
         printf("5) Mostrar estado del vuelo\n");
         printf("6) Salir\n");
         printf("7) Informe de género\n");
         printf("Opción: ");
 
-        // --- MEJORA: Opción (Validación robusta) ---
+        // --- Opción (Validación robusta) ---
         result_opcion = scanf("%d", &opcion);
         while (getchar() != '\n');
 
@@ -252,9 +279,9 @@ int main() {
 
             if (agregar_pasajero(&lista)) {
                 vendidos++;
-                printf("Pasajero registrado exitosamente.\n");
+                printf("✅ Pasajero registrado exitosamente.\n");
             } else {
-                printf("Error al registrar pasajero.\n");
+                printf("❌ Error al registrar pasajero.\n");
             }
 
         } else if (opcion == 2) {
@@ -270,8 +297,9 @@ int main() {
                 printf("No hay pasajeros para abordar.\n");
             } else {
                 abordados++;
-                printf("Abordando: %s | %s | %s | Nivel: %s\n",
-                       p->doc_type, p->doc_number, p->last_name, obtener_nivel(p->nivel));
+                // MODIFICACIÓN: Muestra el peso_kg
+                printf("➡️ Abordando (MENOR PESO): %s | %s | %s | Peso: %.2f kg\n",
+                        p->doc_type, p->doc_number, p->last_name, p->peso_kg);
                 free(p);
             }
 
@@ -282,17 +310,18 @@ int main() {
                 if (!p) break;
                 abordados++;
                 count++;
-                printf("Abordando: %s | %s | %s | Nivel: %s\n",
-                       p->doc_type, p->doc_number, p->last_name, obtener_nivel(p->nivel));
+                // MODIFICACIÓN: Muestra el peso_kg
+                printf("➡️ Abordando (MENOR PESO): %s | %s | %s | Peso: %.2f kg\n",
+                        p->doc_type, p->doc_number, p->last_name, p->peso_kg);
                 free(p);
             }
             if (count == 0)
                 printf("No hay pasajeros para abordar.\n");
             else
-                printf("%d pasajeros abordaron.\n", count);
+                printf("✈️ %d pasajeros abordaron.\n", count);
 
         } else if (opcion == 5) {
-            printf("\nEstado del vuelo:\n");
+            printf("\n---- Estado del Vuelo ----\n");
             printf("Capacidad real: %d\n", capacidad);
             printf("Máximo con overbooking: %d\n", max_tiquetes);
             printf("Registrados: %d\n", vendidos);
